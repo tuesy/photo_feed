@@ -8,6 +8,7 @@ import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 const fetch = require('node-fetch');
 const url = require('url')
 const PHOTOS_URL = 'https://account.altvr.com/api/public/photos?'
+const SPACES_URL = 'https://account.altvr.com/api/public/spaces/'
 
 /**
  * The structure of a world entry in the world database.
@@ -98,7 +99,6 @@ export default class WorldSearch {
 
     // allow the user to preset a query
     if(this.params.q){
-      //console.log(`Hashtag=${this.params.q}`)
       this.search(String(this.params.q));
     }
   }
@@ -121,6 +121,14 @@ export default class WorldSearch {
         //console.log(json);
         if(json.photos){
           for(const photo of json['photos']){
+              var space_id;
+              if(photo.space){
+                space_id = String(photo.space.space_id);
+              }
+              else{
+                space_id = '1579909301554643801'; // defaults to Campfire event
+              }
+
               this.photoDatabase[photo.photo_id] = {
                   // 'description': String(world.description),
                   // 'favorited': Number(world.favorited),
@@ -130,7 +138,7 @@ export default class WorldSearch {
                   // 'userUsername': String(world.username),
                   // 'visited': Number(world.visited),
                   'photoId': String(photo.photo_id),
-                  'worldId': String(photo.space.space_id)
+                  'worldId': space_id,
               }
           }
 
@@ -140,7 +148,7 @@ export default class WorldSearch {
           for (const photoId of Object.keys(this.photoDatabase)) {
               const photoRecord = this.photoDatabase[photoId];
 
-              console.log(photoRecord.image);
+              //console.log(photoRecord.image);
 
               this.spawn('Teleporter to ' + photoRecord.name, photoId,
                   { x: x, y: 0.0, z: 0.0}, { x: 0.0, y: 180, z: 0.0}, this.teleporterScale)
@@ -156,12 +164,12 @@ export default class WorldSearch {
 
   private spawn(name: string, photoId: string, position: any, rotation: any, scale: any){
     let photo = this.photoDatabase[photoId];
+    let resourceId = 'teleporter:space/' + photo.worldId + '?label=true';
 
     // spawn teleporter
     let tp = MRE.Actor.CreateFromLibrary(this.context, {
-
         // resourceId: 'teleporter:space/1498987735254302829?label=true',
-        resourceId: 'teleporter:space/' + photo.worldId + '?label=true',
+        resourceId: resourceId,
         actor: {
             name: name,
             transform: {
@@ -176,6 +184,7 @@ export default class WorldSearch {
             }
         }
     });
+
     this.libraryActors.push(tp);
 
     // spawn preview image
