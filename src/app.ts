@@ -83,7 +83,7 @@ export default class WorldSearch {
 
           if(res.submitted){
             textButton.text.contents =
-              `Photos with hashtag \"#${res.text}\"`;
+              `Community photos for \"${res.text}\"`;
             this.search(res.text);
           }
           else{
