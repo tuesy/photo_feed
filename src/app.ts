@@ -70,7 +70,7 @@ export default class WorldSearch {
         transform: { local: { position: { x: 0, y: 1, z: -1 } } },
         collider: { geometry: { shape: MRE.ColliderType.Box, size: { x: 0.5, y: 0.2, z: 0.01 } } },
         text: {
-          contents: "Search",
+          contents: "Photo Feed",
           height: 0.1,
           anchor: MRE.TextAnchorLocation.MiddleCenter,
           justify: MRE.TextJustify.Center
@@ -78,12 +78,12 @@ export default class WorldSearch {
       }
     });
     textButton.setBehavior(MRE.ButtonBehavior).onClick(user => {
-      user.prompt("Search photos by hashtag...", true)
+      user.prompt("Filter community photos by hashtag...", true)
       .then(res => {
 
           if(res.submitted){
             textButton.text.contents =
-              `Search\n\nResults for \"${res.text}\"`;
+              `Photos with hashtag \"#${res.text}\"`;
             this.search(res.text);
           }
           else{
@@ -118,7 +118,7 @@ export default class WorldSearch {
     fetch(uri)
       .then((res: any) => res.json())
       .then((json: any) => {
-        console.log(json);
+        //console.log(json);
         if(json.photos){
           for(const photo of json['photos']){
               this.photoDatabase[photo.photo_id] = {
@@ -129,7 +129,8 @@ export default class WorldSearch {
                   // 'userDisplayName': String(world.first_name),
                   // 'userUsername': String(world.username),
                   // 'visited': Number(world.visited),
-                  'photoId': String(photo.photo_id)
+                  'photoId': String(photo.photo_id),
+                  'worldId': String(photo.space.space_id)
               }
           }
 
@@ -159,8 +160,8 @@ export default class WorldSearch {
     // spawn teleporter
     let tp = MRE.Actor.CreateFromLibrary(this.context, {
 
-        resourceId: 'teleporter:space/1498987735254302829?label=true',
-        // resourceId: 'teleporter:space/' + photoId + '?label=true',
+        // resourceId: 'teleporter:space/1498987735254302829?label=true',
+        resourceId: 'teleporter:space/' + photo.worldId + '?label=true',
         actor: {
             name: name,
             transform: {
