@@ -102,7 +102,7 @@ Click "OK" for an example.
 
 Share a photo by adding a hashtag and checking "Share with the Community" on altvr.com.`).then(res => {
           if(res.submitted){
-            infoText.text.contents = `Photos for \"${SAMPLE_HASHTAG}\"`;
+            infoText.text.contents = this.resultMessageFor(SAMPLE_HASHTAG);
             this.search(SAMPLE_HASHTAG);
           }
           else
@@ -128,8 +128,7 @@ Enter a hashtag and click "OK"
       .then(res => {
 
           if(res.submitted && res.text.length > 0){
-            infoText.text.contents =
-              `Community photos for \"${res.text}\"`;
+            infoText.text.contents = this.resultMessageFor(res.text);
             this.search(res.text);
           }
           else{
@@ -146,6 +145,10 @@ Enter a hashtag and click "OK"
     if(this.params.q){
       this.search(String(this.params.q));
     }
+  }
+
+  private resultMessageFor(hashtag: string){
+    return `Photos for "${hashtag}"`;
   }
 
   // search for worlds and spawn teleporters
