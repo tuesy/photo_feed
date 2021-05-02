@@ -8,33 +8,18 @@ import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 const fetch = require('node-fetch');
 const url = require('url');
 const PHOTOS_URL = 'https://account.altvr.com/api/public/photos?';
-const SPACES_URL = 'https://account.altvr.com/api/public/spaces/';
 const WELCOME_TEXT = 'Photo Feed App';
 const INFO_TEXT_HEIGHT = 1.2;
 const BUTTON_HEIGHT = 0.6;
 const SAMPLE_HASHTAG = 'campfire';
 const TELEPORTER_BASE = -0.5;
-/**
- * The structure of a world entry in the world database.
- */
-type WorldDescriptor = {
-    description: string;
-    favorited: number;
-    image: string;
-    name: string;
-    userDisplayName: string;
-    userUsername: string;
-    visited: number;
-    worldId: string;
-};
 
 type PhotoDescriptor = {
-    photoId: string;
-    name: string;
-    image: string;
-    worldId: string;
+  photoId: string;
+  name: string;
+  image: string;
+  worldId: string;
 };
-
 
 /**
  * The main class of this app. All the logic goes here.
@@ -82,9 +67,6 @@ export default class WorldSearch {
         }
       }
     });
-
-    // hashtag button - 1579239194507608147
-    // question button -
 
     const helpButton = MRE.Actor.CreateFromLibrary(this.context, {
       resourceId: 'artifact:1579238405710021245',
@@ -178,13 +160,8 @@ Enter a hashtag and click "OK"
               }
 
               this.photoDatabase[photo.photo_id] = {
-                  // 'description': String(world.description),
-                  // 'favorited': Number(world.favorited),
                   'image': String(photo.image_original),
                   'name': String(photo.name),
-                  // 'userDisplayName': String(world.first_name),
-                  // 'userUsername': String(world.username),
-                  // 'visited': Number(world.visited),
                   'photoId': String(photo.photo_id),
                   'worldId': space_id,
               }
@@ -195,8 +172,6 @@ Enter a hashtag and click "OK"
           let x = this.teleporterSpacing;
           for (const photoId of Object.keys(this.photoDatabase)) {
               const photoRecord = this.photoDatabase[photoId];
-
-              //console.log(photoRecord.image);
 
               this.spawn('Teleporter to ' + photoRecord.name, photoId,
                   { x: x, y: TELEPORTER_BASE, z: 0.0}, { x: 0.0, y: 180, z: 0.0}, this.teleporterScale)
@@ -216,7 +191,6 @@ Enter a hashtag and click "OK"
 
     // spawn teleporter
     let tp = MRE.Actor.CreateFromLibrary(this.context, {
-        // resourceId: 'teleporter:space/1498987735254302829?label=true',
         resourceId: resourceId,
         actor: {
             name: name,
