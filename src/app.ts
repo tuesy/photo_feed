@@ -6,10 +6,14 @@
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 
 const fetch = require('node-fetch');
-const url = require('url')
-const PHOTOS_URL = 'https://account.altvr.com/api/public/photos?'
-const SPACES_URL = 'https://account.altvr.com/api/public/spaces/'
-
+const url = require('url');
+const PHOTOS_URL = 'https://account.altvr.com/api/public/photos?';
+const SPACES_URL = 'https://account.altvr.com/api/public/spaces/';
+const WELCOME_TEXT = 'Photo Feed App';
+const INFO_TEXT_HEIGHT = 1.2;
+const BUTTON_HEIGHT = 0.6;
+const SAMPLE_HASHTAG = 'campfire';
+const TELEPORTER_BASE = -0.5;
 /**
  * The structure of a world entry in the world database.
  */
@@ -65,25 +69,66 @@ export default class WorldSearch {
     // set up somewhere to store loaded assets (meshes, textures, animations, gltfs, etc.)
     this.assets = new MRE.AssetContainer(this.context);
 
-    const textButton = MRE.Actor.Create(this.context, {
+    const infoText = MRE.Actor.Create(this.context, {
       actor: {
-        name: 'searchButton',
-        transform: { local: { position: { x: 0, y: 1, z: -1 } } },
+        name: 'Info Text',
+        transform: { local: { position: { x: 0, y: INFO_TEXT_HEIGHT, z: -1 } } },
         collider: { geometry: { shape: MRE.ColliderType.Box, size: { x: 0.5, y: 0.2, z: 0.01 } } },
         text: {
-          contents: "Photo Feed",
+          contents: WELCOME_TEXT,
           height: 0.1,
           anchor: MRE.TextAnchorLocation.MiddleCenter,
           justify: MRE.TextJustify.Center
         }
       }
     });
-    textButton.setBehavior(MRE.ButtonBehavior).onClick(user => {
-      user.prompt("Filter community photos by hashtag...", true)
+
+    // hashtag button - 1579239194507608147
+    // question button -
+
+    const helpButton = MRE.Actor.CreateFromLibrary(this.context, {
+      resourceId: 'artifact:1579238405710021245',
+      actor: {
+        name: 'Help Button',
+        transform: { local: { position: { x: 0.2, y: BUTTON_HEIGHT, z: -1 } } },
+        collider: { geometry: { shape: MRE.ColliderType.Box, size: { x: 0.5, y: 0.2, z: 0.01 } } }
+      }
+     });
+    helpButton.setBehavior(MRE.ButtonBehavior).onClick(user => {
+      user.prompt(`
+This app showcases the latest community photos for a specific hashtag.
+
+Click "OK" for an example.
+
+Share a photo by adding a hashtag and checking "Share with the Community" on altvr.com.`).then(res => {
+          if(res.submitted){
+            infoText.text.contents = `Photos for \"${SAMPLE_HASHTAG}\"`;
+            this.search(SAMPLE_HASHTAG);
+          }
+          else
+            infoText.text.contents = WELCOME_TEXT;
+      })
+      .catch(err => {
+        console.error(err);
+      });
+    });
+
+    const hashtagButton = MRE.Actor.CreateFromLibrary(this.context, {
+      resourceId: 'artifact:1579239194507608147',
+      actor: {
+        name: 'Hashtag Button',
+        transform: { local: { position: { x: -0.2, y: BUTTON_HEIGHT, z: -1 } } },
+        collider: { geometry: { shape: MRE.ColliderType.Box, size: { x: 0.5, y: 0.2, z: 0.01 } } }
+      }
+    });
+    hashtagButton.setBehavior(MRE.ButtonBehavior).onClick(user => {
+      user.prompt(`
+Enter a hashtag and click "OK"
+(e.g. 'campfire' or 'selfie').`, true)
       .then(res => {
 
-          if(res.submitted){
-            textButton.text.contents =
+          if(res.submitted && res.text.length > 0){
+            infoText.text.contents =
               `Community photos for \"${res.text}\"`;
             this.search(res.text);
           }
@@ -97,7 +142,7 @@ export default class WorldSearch {
       });
     });
 
-    // allow the user to preset a query
+    // allow the user to preset a query (e.g. /?q=campfire)
     if(this.params.q){
       this.search(String(this.params.q));
     }
@@ -110,10 +155,10 @@ export default class WorldSearch {
       actor.destroy();
     }
 
-    // clear world data
+    // clear data
     this.photoDatabase = {};
 
-    // query public worlds search api
+    // query public photos api
     let uri = PHOTOS_URL + new url.URLSearchParams({ hashtag: query, per: this.maxResults });
     fetch(uri)
       .then((res: any) => res.json())
@@ -151,7 +196,7 @@ export default class WorldSearch {
               //console.log(photoRecord.image);
 
               this.spawn('Teleporter to ' + photoRecord.name, photoId,
-                  { x: x, y: 0.0, z: 0.0}, { x: 0.0, y: 180, z: 0.0}, this.teleporterScale)
+                  { x: x, y: TELEPORTER_BASE, z: 0.0}, { x: 0.0, y: 180, z: 0.0}, this.teleporterScale)
               x += this.teleporterSpacing;
           }
         }
