@@ -13,6 +13,7 @@ const INFO_TEXT_HEIGHT = 1.2;
 const BUTTON_HEIGHT = 0.6;
 const SAMPLE_HASHTAG = 'campfire';
 const TELEPORTER_BASE = -0.5;
+const PAGE_SIZE = 25;
 
 type PhotoDescriptor = {
   photoId: string;
@@ -35,13 +36,14 @@ export default class WorldSearch {
 
   private teleporterSpacing = 0.8;
   private teleporterScale = {x: 0.5, y: 0.5, z: 0.5};
-  private maxResults = 25;
   private previewImageWidth = 1.4;
   private previewImageHeight = 1;
   private previewImageDepth = 0.02;
   private previewImagePosition = {y: 2};
   private moreInfoHeight = 0.2;
   private moreInfoPosition = {y: 2.8};
+  private photos : any;
+  private infoText : any;
 
   constructor(private context: MRE.Context, private params: MRE.ParameterSet) {
     this.context.onStarted(() => this.started());
@@ -54,7 +56,7 @@ export default class WorldSearch {
     // set up somewhere to store loaded assets (meshes, textures, animations, gltfs, etc.)
     this.assets = new MRE.AssetContainer(this.context);
 
-    const infoText = MRE.Actor.Create(this.context, {
+    this.infoText = MRE.Actor.Create(this.context, {
       actor: {
         name: 'Info Text',
         transform: { local: { position: { x: 0, y: INFO_TEXT_HEIGHT, z: -1 } } },
@@ -84,11 +86,10 @@ Click "OK" for an example.
 
 Share a photo by adding a hashtag and checking "Share with the Community" on altvr.com.`).then(res => {
           if(res.submitted){
-            infoText.text.contents = this.resultMessageFor(SAMPLE_HASHTAG);
             this.search(SAMPLE_HASHTAG);
           }
           else
-            infoText.text.contents = WELCOME_TEXT;
+            this.infoText.text.contents = WELCOME_TEXT;
       })
       .catch(err => {
         console.error(err);
@@ -110,7 +111,6 @@ Enter a hashtag and click "OK"
       .then(res => {
 
           if(res.submitted && res.text.length > 0){
-            infoText.text.contents = this.resultMessageFor(res.text);
             this.search(res.text);
           }
           else{
@@ -129,8 +129,43 @@ Enter a hashtag and click "OK"
     }
   }
 
-  private resultMessageFor(hashtag: string){
-    return `Photos for "${hashtag}"`;
+  private async fetchAllPages(hashtag: string){
+    this.photos = [];
+    let page = 1;
+    while(await this.fetchPage(hashtag, page)){
+      page++;
+    }
+    this.processPhotos();
+    this.infoText.text.contents = `Photos (${this.photos.length}) for "${hashtag}"`;
+  }
+
+  private async fetchPage(hashtag: string, page: number){
+    let uri = PHOTOS_URL + new url.URLSearchParams({ hashtag: hashtag, per: PAGE_SIZE, page: page });
+    return await fetch(uri)
+      .then((res: any) => res.json())
+      .then((json: any) => {
+        // console.log(`Fetching page ${page} of ${json.pagination.pages}`);
+        if(json.photos){
+          for(var photo of json['photos']){
+            var space_id;
+            if(photo.space)
+              space_id = String(photo.space.space_id);
+            else
+              space_id = '1579909301554643801'; // defaults to Campfire event
+
+            this.photos.push({
+            'image': String(photo.image_original),
+            'name': String(photo.name),
+            'photoId': String(photo.photo_id),
+            'worldId': space_id,
+            })
+          }
+        }
+        if(this.params.show_all)
+          return page < json.pagination.pages;
+        else
+          return false;
+      });
   }
 
   // search for worlds and spawn teleporters
@@ -141,52 +176,25 @@ Enter a hashtag and click "OK"
     }
 
     // clear data
-    this.photoDatabase = {};
+    this.photos = [];
 
-    // query public photos api
-    let uri = PHOTOS_URL + new url.URLSearchParams({ hashtag: query, per: this.maxResults });
-    fetch(uri)
-      .then((res: any) => res.json())
-      .then((json: any) => {
-        //console.log(json);
-        if(json.photos){
-          for(const photo of json['photos']){
-              var space_id;
-              if(photo.space){
-                space_id = String(photo.space.space_id);
-              }
-              else{
-                space_id = '1579909301554643801'; // defaults to Campfire event
-              }
+    // might take a while so let them know it started
+    this.infoText.text.contents = `Searching for "${query}" photos...`;
 
-              this.photoDatabase[photo.photo_id] = {
-                  'image': String(photo.image_original),
-                  'name': String(photo.name),
-                  'photoId': String(photo.photo_id),
-                  'worldId': space_id,
-              }
-          }
-
-          // where all the magic happens
-          // Loop over the database
-          let x = this.teleporterSpacing;
-          for (const photoId of Object.keys(this.photoDatabase)) {
-              const photoRecord = this.photoDatabase[photoId];
-
-              this.spawn('Teleporter to ' + photoRecord.name, photoId,
-                  { x: x, y: TELEPORTER_BASE, z: 0.0}, { x: 0.0, y: 180, z: 0.0}, this.teleporterScale)
-              x += this.teleporterSpacing;
-          }
-        }
-        else if (json.status == '404'){
-          // 404 is a normal HTTP response so you can't 'catch' it
-          console.log("ERROR: received a 404 for " + uri)
-        }
-      });
+    this.fetchAllPages(query);
   }
 
-  private spawn(name: string, photoId: string, position: any, rotation: any, scale: any){
-    let photo = this.photoDatabase[photoId];
+  private processPhotos(){
+    let x = this.teleporterSpacing;
+    for (var photo of this.photos) {
+      // console.log(photo);
+      this.spawn('Teleporter to ' + photo.name, photo,
+          { x: x, y: TELEPORTER_BASE, z: 0.0}, { x: 0.0, y: 180, z: 0.0}, this.teleporterScale)
+      x += this.teleporterSpacing;
+    }
+  }
+
+  private spawn(name: string, photo: any, position: any, rotation: any, scale: any){
     let resourceId = 'teleporter:space/' + photo.worldId + '?label=true';
 
     // spawn teleporter

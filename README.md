@@ -21,6 +21,10 @@ You can also pre-configure the app to filter photos with a specific hashtag usin
 
 > wss://mankindforward-photo-feed.herokuapp.com?q=campfire
 
+By default, the app will return the first 25 results. You can return all results by passing a parameter:
+
+> wss://mankindforward-photo-feed.herokuapp.com?show_all=true
+
 # Development
 * Fork this repo
 * Create a Heroku app and link it to your github repo
